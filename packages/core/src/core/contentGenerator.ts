@@ -179,6 +179,43 @@ export async function createContentGenerator(
       model: config.model
     });
     
+    // Intercept fetch calls to log HTTP requests with full details
+    const originalFetch = global.fetch;
+    global.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      const method = init?.method || 'GET';
+      const headers = init?.headers || {};
+      const body = init?.body;
+      
+      console.log('🌐 HTTP Request Details:');
+      console.log('  URL:', url);
+      console.log('  Method:', method);
+      console.log('  Headers:', JSON.stringify(headers, null, 2));
+      
+      if (body) {
+        console.log('  Body length:', typeof body === 'string' ? body.length : 'non-string');
+        if (typeof body === 'string' && body.length < 2000) {
+          console.log('  Body preview:', body.substring(0, 500) + (body.length > 500 ? '...' : ''));
+        }
+      }
+      
+      // Parse URL to show query params if any
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.search) {
+          console.log('  Query params:', urlObj.search);
+        }
+        console.log('  Hostname:', urlObj.hostname);
+        console.log('  Path:', urlObj.pathname);
+      } catch (e) {
+        console.log('  URL parsing failed:', e);
+      }
+      
+      console.log('  ---');
+      
+      return originalFetch(input, init);
+    };
+    
     const googleGenAI = new GoogleGenAI({
       apiKey: config.apiKey === '' ? undefined : config.apiKey,
       vertexai: config.vertexai,
